@@ -15,7 +15,7 @@
 //     SDRAM word addr = {page_reg[12:0], (offset-0x100)[11:2]} (24-bit word address)
 //     Each 32-bit WB access reads/writes the lower 16 bits as one SDRAM word.
 //
-// Clock domain crossing: WB runs at clk_wb (27 MHz), SDRAM ctrl at clk_sdram (100 MHz).
+// Clock domain crossing: WB runs at clk (27 MHz), SDRAM ctrl at clk_sdram (100 MHz).
 // Uses a toggle-handshake CDC for each Wishbone transaction.
 
 `default_nettype none
@@ -43,7 +43,7 @@ module papilio_sdram_wb #(
     parameter INIT_WAIT   = 20000
 ) (
     // Wishbone interface (27 MHz domain)
-    input  wire        clk_wb,
+    input  wire        clk,
     input  wire        rst,
 
     input  wire [15:0] wb_adr_i,
@@ -245,7 +245,7 @@ end
 // ============================================================
 // WB domain: sync ack_tog, complete wb_ack_o
 // ============================================================
-always @(posedge clk_wb or posedge rst) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         ack_tog_s1     <= 1'b0;
         ack_tog_s2     <= 1'b0;
