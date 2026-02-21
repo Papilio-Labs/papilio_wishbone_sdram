@@ -1,0 +1,123 @@
+{
+  "name": "papilio_wishbone_sdram",
+  "version": "0.1.0",
+  "description": "Wishbone SDRAM controller for Papilio FPGA boards — multi-port arbiter, hardware memory verification, paged ESP32 access (W9825G6KH-6 and compatible SDR SDRAM)",
+  "keywords": [
+    "papilio",
+    "wishbone",
+    "sdram",
+    "memory",
+    "fpga",
+    "w9825g6kh"
+  ],
+  "authors": [
+    {
+      "name": "Papilio Labs",
+      "maintainer": true
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Papilio-Labs/papilio_wishbone_sdram.git"
+  },
+  "license": "MIT",
+  "frameworks": ["arduino"],
+  "platforms": ["espressif32"],
+  "dependencies": [
+    {
+      "name": "papilio_wishbone_bus",
+      "version": "*"
+    },
+    {
+      "name": "papilio_os",
+      "version": "*",
+      "optional": true
+    }
+  ],
+  "export": {
+    "include": [
+      "src/*.h",
+      "src/*.cpp",
+      "gateware/*.v",
+      "gateware/constraints/*.cst",
+      "README.md",
+      "AI_SKILL.md",
+      "examples/**",
+      "tests/**"
+    ]
+  },
+  "papilio": {
+    "version": "1.0",
+    "gateware": {
+      "modules": [
+        {
+          "file": "gateware/papilio_sdram_wb.v",
+          "module": "papilio_sdram_wb",
+          "parameters": {
+            "BASE_ADDR": "16'h8000",
+            "ROW_BITS": 13,
+            "COL_BITS": 9,
+            "BANK_BITS": 2,
+            "DATA_WIDTH": 16
+          },
+          "description": "Wishbone wrapper for SDR SDRAM controller with paged access and hardware memory verification"
+        },
+        {
+          "file": "gateware/papilio_sdram_ctrl.v",
+          "module": "papilio_sdram_ctrl",
+          "parameters": {
+            "ROW_BITS": 13,
+            "COL_BITS": 9,
+            "BANK_BITS": 2,
+            "DATA_WIDTH": 16,
+            "tRCD": 2,
+            "tRP": 2,
+            "tRC": 6,
+            "tRFC": 6,
+            "tWR": 2,
+            "CAS_LATENCY": 3,
+            "REFRESH_INTERVAL": 780,
+            "INIT_WAIT": 20000
+          },
+          "description": "Parameterized SDR SDRAM controller state machine — defaults to W9825G6KH-6 at 100 MHz"
+        }
+      ],
+      "constraints": {
+        "papilio_retrocade": "gateware/constraints/papilio_retrocade.cst"
+      }
+    },
+    "wishbone": {
+      "type": "slave",
+      "tier": "extended",
+      "address_range": "8 KB (0x8000-0x9FFF)",
+      "data_width": 32,
+      "burst_support": false,
+      "features": ["read", "write", "paged_memory", "memory_verify"]
+    },
+    "esp32": {
+      "class": "PapilioSdram",
+      "headers": ["PapilioSdram.h"],
+      "init_params": {
+        "base_address": "0x8000"
+      },
+      "init_code": "begin()",
+      "description": "SDRAM controller with paged read/write, memory verification, and status monitoring"
+    },
+    "cli": {
+      "enabled": true,
+      "module_name": "sdram",
+      "os_plugin_class": "PapilioSdramOS",
+      "os_plugin_header": "PapilioSdramOS.h",
+      "commands": [
+        "status - Show controller state and init status",
+        "read <addr> - Read 16-bit word at SDRAM address",
+        "write <addr> <data> - Write 16-bit word to SDRAM address",
+        "fill <addr> <size> <value> - Fill region with value",
+        "dump <addr> <count> - Hex dump words from SDRAM",
+        "verify [walking|addr|random|fill] - Run hardware memory verification",
+        "help - Show all commands",
+        "tutorial - Interactive step-by-step walkthrough"
+      ]
+    }
+  }
+}

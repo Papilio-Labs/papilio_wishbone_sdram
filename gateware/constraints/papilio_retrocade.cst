@@ -1,0 +1,107 @@
+// Papilio Retrocade Constraint File
+// Module: papilio_wishbone_sdram (papilio_sdram_ctrl / papilio_sdram_wb)
+// Chip:   Winbond W9825G6KH-6 SDR SDRAM (32 MB, 16-bit, 166 MHz max)
+// FPGA:   Gowin GW2A-LV18PG256C8/I7
+
+// ----------------------------------------------------------------
+// Address Lines (A0-A12 = 13-bit row/column address)
+// ----------------------------------------------------------------
+IO_LOC "sdram_addr[0]"  N15;
+IO_LOC "sdram_addr[1]"  R16;
+IO_LOC "sdram_addr[2]"  P15;
+IO_LOC "sdram_addr[3]"  P16;
+IO_LOC "sdram_addr[4]"  H13;
+IO_LOC "sdram_addr[5]"  G14;
+IO_LOC "sdram_addr[6]"  G15;
+IO_LOC "sdram_addr[7]"  F14;
+IO_LOC "sdram_addr[8]"  F16;
+IO_LOC "sdram_addr[9]"  E15;
+IO_LOC "sdram_addr[10]" N16;
+IO_LOC "sdram_addr[11]" D14;
+IO_LOC "sdram_addr[12]" A15;
+
+// ----------------------------------------------------------------
+// Bank Address Lines (BA0-BA1 = 2-bit bank select, 4 banks)
+// ----------------------------------------------------------------
+IO_LOC "sdram_ba[0]" L16;
+IO_LOC "sdram_ba[1]" N14;
+
+// ----------------------------------------------------------------
+// Data Lines (DQ0-DQ15 = 16-bit bidirectional data bus)
+// ----------------------------------------------------------------
+IO_LOC "sdram_dq[0]"  K13;
+IO_LOC "sdram_dq[1]"  K12;
+IO_LOC "sdram_dq[2]"  K11;
+IO_LOC "sdram_dq[3]"  L13;
+IO_LOC "sdram_dq[4]"  H15;
+IO_LOC "sdram_dq[5]"  G16;
+IO_LOC "sdram_dq[6]"  H14;
+IO_LOC "sdram_dq[7]"  H16;
+IO_LOC "sdram_dq[8]"  C12;
+IO_LOC "sdram_dq[9]"  B12;
+IO_LOC "sdram_dq[10]" E15;
+IO_LOC "sdram_dq[11]" F15;
+IO_LOC "sdram_dq[12]" D16;
+IO_LOC "sdram_dq[13]" E10;
+IO_LOC "sdram_dq[14]" D10;
+IO_LOC "sdram_dq[15]" D11;
+
+// ----------------------------------------------------------------
+// Control Signals
+// ----------------------------------------------------------------
+IO_LOC "sdram_clk"   A14;  // Clock (100 MHz from PLL)
+IO_LOC "sdram_cke"   B14;  // Clock Enable (held high after init)
+IO_LOC "sdram_cs_n"  T9;   // Chip Select (active low)
+IO_LOC "sdram_ras_n" K15;  // Row Address Strobe (active low)
+IO_LOC "sdram_cas_n" K14;  // Column Address Strobe (active low)
+IO_LOC "sdram_we_n"  K16;  // Write Enable (active low)
+
+// ----------------------------------------------------------------
+// Data Mask Lines
+// dqm[0] = DQML (low byte), dqm[1] = DQMH (high byte)
+// ----------------------------------------------------------------
+IO_LOC "sdram_dqm[0]" J15;  // DQML
+IO_LOC "sdram_dqm[1]" B13;  // DQMH
+
+// ----------------------------------------------------------------
+// IO Standards - all SDRAM signals use LVCMOS33
+// ----------------------------------------------------------------
+IO_PORT "sdram_addr[0]"  IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_addr[1]"  IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_addr[2]"  IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_addr[3]"  IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_addr[4]"  IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_addr[5]"  IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_addr[6]"  IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_addr[7]"  IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_addr[8]"  IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_addr[9]"  IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_addr[10]" IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_addr[11]" IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_addr[12]" IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_ba[0]"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_ba[1]"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[0]"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[1]"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[2]"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[3]"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[4]"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[5]"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[6]"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[7]"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[8]"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[9]"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[10]"   IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[11]"   IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[12]"   IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[13]"   IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[14]"   IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dq[15]"   IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_clk"      IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_cke"      IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_cs_n"     IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_ras_n"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_cas_n"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_we_n"     IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dqm[0]"   IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_PORT "sdram_dqm[1]"   IO_TYPE=LVCMOS33 PULL_MODE=NONE;
