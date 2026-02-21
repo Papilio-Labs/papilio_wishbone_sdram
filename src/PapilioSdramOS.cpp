@@ -10,83 +10,83 @@ PapilioSdramOS::PapilioSdramOS(PapilioSdram* device) : _device(device) {
 }
 
 void PapilioSdramOS::registerCommands() {
-    PapilioOS.registerCommand("sdram", "help",     "Show all sdram commands",            handleHelp);
-    PapilioOS.registerCommand("sdram", "status",   "Show SDRAM controller status",       handleStatus);
-    PapilioOS.registerCommand("sdram", "read",     "Read 16-bit word:  read <addr>",     handleRead);
-    PapilioOS.registerCommand("sdram", "write",    "Write 16-bit word: write <addr> <data>", handleWrite);
-    PapilioOS.registerCommand("sdram", "fill",     "Fill region:       fill <addr> <count> <value>", handleFill);
-    PapilioOS.registerCommand("sdram", "dump",     "Hex dump:          dump <addr> [count]", handleDump);
-    PapilioOS.registerCommand("sdram", "verify",   "Hardware verify:   verify [walking|addr|random|fill] [start] [size]", handleVerify);
-    PapilioOS.registerCommand("sdram", "tutorial", "Interactive step-by-step walkthrough", handleTutorial);
+    PapilioOS.registerCommand("sdram", "help",     handleHelp,     "Show all sdram commands");
+    PapilioOS.registerCommand("sdram", "status",   handleStatus,   "Show SDRAM controller status");
+    PapilioOS.registerCommand("sdram", "read",     handleRead,     "Read 16-bit word:  read <addr>");
+    PapilioOS.registerCommand("sdram", "write",    handleWrite,    "Write 16-bit word: write <addr> <data>");
+    PapilioOS.registerCommand("sdram", "fill",     handleFill,     "Fill region:       fill <addr> <count> <value>");
+    PapilioOS.registerCommand("sdram", "dump",     handleDump,     "Hex dump:          dump <addr> [count]");
+    PapilioOS.registerCommand("sdram", "verify",   handleVerify,   "Hardware verify:   verify [walking|addr|random|fill] [start] [size]");
+    PapilioOS.registerCommand("sdram", "tutorial", handleTutorial, "Interactive step-by-step walkthrough");
 }
 
 // ----------------------------------------------------------------
 void PapilioSdramOS::handleHelp(int argc, char** argv) {
-    PapilioOS.println("sdram commands:");
-    PapilioOS.println("  status                        - controller state");
-    PapilioOS.println("  read <addr>                   - read word at hex address");
-    PapilioOS.println("  write <addr> <data>           - write word");
-    PapilioOS.println("  fill <addr> <count> <value>   - fill region");
-    PapilioOS.println("  dump <addr> [count=16]        - hex dump");
-    PapilioOS.println("  verify [walking|addr|random|fill] [start=0] [size=all]");
-    PapilioOS.println("  tutorial                      - guided walkthrough");
+    Serial.println("sdram commands:");
+    Serial.println("  status                        - controller state");
+    Serial.println("  read <addr>                   - read word at hex address");
+    Serial.println("  write <addr> <data>           - write word");
+    Serial.println("  fill <addr> <count> <value>   - fill region");
+    Serial.println("  dump <addr> [count=16]        - hex dump");
+    Serial.println("  verify [walking|addr|random|fill] [start=0] [size=all]");
+    Serial.println("  tutorial                      - guided walkthrough");
 }
 
 // ----------------------------------------------------------------
 void PapilioSdramOS::handleStatus(int argc, char** argv) {
     if (!_instance) return;
     PapilioSdram* d = _instance->_device;
-    PapilioOS.print("SDRAM status: ");
+    Serial.print("SDRAM status: ");
     if (d->isReady()) {
-        PapilioOS.println("READY (init_done)");
+        Serial.println("READY (init_done)");
     } else {
-        PapilioOS.println("NOT READY (waiting for init_done)");
+        Serial.println("NOT READY (waiting for init_done)");
     }
-    PapilioOS.printf("  Memory size:   %lu MB\r\n", d->getMemorySizeBytes() / (1024*1024));
-    PapilioOS.printf("  Base address:  0x%04X\r\n", d->getBaseAddress());
-    PapilioOS.printf("  Page size:     %u words (%u bytes)\r\n", SDRAM_PAGE_WORDS, SDRAM_PAGE_BYTES);
+    Serial.printf("  Memory size:   %lu MB\r\n", d->getMemorySizeBytes() / (1024*1024));
+    Serial.printf("  Base address:  0x%04X\r\n", d->getBaseAddress());
+    Serial.printf("  Page size:     %u words (%u bytes)\r\n", SDRAM_PAGE_WORDS, SDRAM_PAGE_BYTES);
 }
 
 // ----------------------------------------------------------------
 void PapilioSdramOS::handleRead(int argc, char** argv) {
     if (!_instance || argc < 2) {
-        PapilioOS.println("Usage: sdram read <addr>");
+        Serial.println("Usage: sdram read <addr>");
         return;
     }
     uint32_t addr = strtoul(argv[1], nullptr, 16);
     uint16_t data = _instance->_device->readWord(addr);
-    PapilioOS.printf("  [0x%06lX] = 0x%04X (%u)\r\n", addr, data, data);
+    Serial.printf("  [0x%06lX] = 0x%04X (%u)\r\n", addr, data, data);
 }
 
 // ----------------------------------------------------------------
 void PapilioSdramOS::handleWrite(int argc, char** argv) {
     if (!_instance || argc < 3) {
-        PapilioOS.println("Usage: sdram write <addr> <data>");
+        Serial.println("Usage: sdram write <addr> <data>");
         return;
     }
     uint32_t addr = strtoul(argv[1], nullptr, 16);
     uint16_t data = (uint16_t)strtoul(argv[2], nullptr, 16);
     _instance->_device->writeWord(addr, data);
-    PapilioOS.printf("  Wrote 0x%04X to [0x%06lX]\r\n", data, addr);
+    Serial.printf("  Wrote 0x%04X to [0x%06lX]\r\n", data, addr);
 }
 
 // ----------------------------------------------------------------
 void PapilioSdramOS::handleFill(int argc, char** argv) {
     if (!_instance || argc < 4) {
-        PapilioOS.println("Usage: sdram fill <addr> <count> <value>");
+        Serial.println("Usage: sdram fill <addr> <count> <value>");
         return;
     }
     uint32_t addr  = strtoul(argv[1], nullptr, 16);
     uint32_t count = strtoul(argv[2], nullptr, 0);
     uint16_t val   = (uint16_t)strtoul(argv[3], nullptr, 16);
     _instance->_device->fill(addr, count, val);
-    PapilioOS.printf("  Filled %lu words at 0x%06lX with 0x%04X\r\n", count, addr, val);
+    Serial.printf("  Filled %lu words at 0x%06lX with 0x%04X\r\n", count, addr, val);
 }
 
 // ----------------------------------------------------------------
 void PapilioSdramOS::handleDump(int argc, char** argv) {
     if (!_instance || argc < 2) {
-        PapilioOS.println("Usage: sdram dump <addr> [count=16]");
+        Serial.println("Usage: sdram dump <addr> [count=16]");
         return;
     }
     uint32_t addr  = strtoul(argv[1], nullptr, 16);
@@ -95,11 +95,11 @@ void PapilioSdramOS::handleDump(int argc, char** argv) {
 
     PapilioSdram* d = _instance->_device;
     for (uint32_t i = 0; i < count; i++) {
-        if ((i % 8) == 0) PapilioOS.printf("  %06lX: ", addr + i);
-        PapilioOS.printf("%04X ", d->readWord(addr + i));
-        if ((i % 8) == 7) PapilioOS.println("");
+        if ((i % 8) == 0) Serial.printf("  %06lX: ", addr + i);
+        Serial.printf("%04X ", d->readWord(addr + i));
+        if ((i % 8) == 7) Serial.println("");
     }
-    if (count % 8 != 0) PapilioOS.println("");
+    if (count % 8 != 0) Serial.println("");
 }
 
 // ----------------------------------------------------------------
@@ -128,21 +128,21 @@ void PapilioSdramOS::handleVerify(int argc, char** argv) {
     uint32_t      start = (argc >= 3) ? strtoul(argv[2], nullptr, 16) : 0;
     uint32_t      size  = (argc >= 4) ? strtoul(argv[3], nullptr, 0) : SDRAM_TOTAL_WORDS;
 
-    PapilioOS.printf("  Starting hardware verify: %s from 0x%06lX, %lu words...\r\n",
+    Serial.printf("  Starting hardware verify: %s from 0x%06lX, %lu words...\r\n",
                      patternName(pat), start, size);
     d->startVerify(pat, start, size);
 
     uint32_t t0 = millis();
     while (d->verifyRunning()) {
         delay(100);
-        PapilioOS.print(".");
+        Serial.print(".");
     }
     uint32_t elapsed = millis() - t0;
-    PapilioOS.println("");
-    PapilioOS.printf("  Done in %lu ms. Result: %s\r\n", elapsed,
+    Serial.println("");
+    Serial.printf("  Done in %lu ms. Result: %s\r\n", elapsed,
                      d->verifyPassed() ? "PASS" : "FAIL");
     if (!d->verifyPassed()) {
-        PapilioOS.printf("  First failure at word address: 0x%06lX\r\n", d->verifyFailAddress());
+        Serial.printf("  First failure at word address: 0x%06lX\r\n", d->verifyFailAddress());
     }
 }
 
@@ -151,44 +151,44 @@ void PapilioSdramOS::handleTutorial(int argc, char** argv) {
     if (!_instance) return;
     PapilioSdram* d = _instance->_device;
 
-    PapilioOS.println("\r\n=== SDRAM Tutorial ===");
-    PapilioOS.println("This tutorial walks through using the external SDRAM on your Papilio Retrocade.");
-    PapilioOS.println("Type 'exit' at any prompt to quit.\r\n");
+    Serial.println("\r\n=== SDRAM Tutorial ===");
+    Serial.println("This tutorial walks through using the external SDRAM on your Papilio Retrocade.");
+    Serial.println("Type 'exit' at any prompt to quit.\r\n");
 
     // Step 1: Check status
-    PapilioOS.println("Step 1: Check that the SDRAM controller has initialized.");
-    PapilioOS.println("  Try: sdram status");
-    PapilioOS.println("  The SDRAM needs ~200µs to initialize after power-up.");
+    Serial.println("Step 1: Check that the SDRAM controller has initialized.");
+    Serial.println("  Try: sdram status");
+    Serial.println("  The SDRAM needs ~200µs to initialize after power-up.");
     if (!d->isReady()) {
-        PapilioOS.println("  [WARNING] SDRAM is not yet ready. Check FPGA bitstream and hardware.");
+        Serial.println("  [WARNING] SDRAM is not yet ready. Check FPGA bitstream and hardware.");
     } else {
-        PapilioOS.println("  [OK] SDRAM is ready.");
+        Serial.println("  [OK] SDRAM is ready.");
     }
 
     // Step 2: Write and read back
-    PapilioOS.println("\r\nStep 2: Write and read a word.");
-    PapilioOS.println("  Writing 0xBEEF to address 0x000010...");
+    Serial.println("\r\nStep 2: Write and read a word.");
+    Serial.println("  Writing 0xBEEF to address 0x000010...");
     d->writeWord(0x000010, 0xBEEF);
     uint16_t v = d->readWord(0x000010);
-    PapilioOS.printf("  Read back: 0x%04X  %s\r\n", v,
+    Serial.printf("  Read back: 0x%04X  %s\r\n", v,
                      (v == 0xBEEF) ? "[PASS]" : "[FAIL - check FPGA]");
 
     // Step 3: Memory verification
-    PapilioOS.println("\r\nStep 3: Run hardware memory verification (small region).");
-    PapilioOS.println("  Testing first 1024 words with walking-ones pattern...");
+    Serial.println("\r\nStep 3: Run hardware memory verification (small region).");
+    Serial.println("  Testing first 1024 words with walking-ones pattern...");
     bool ok = d->verify(SDRAM_PAT_WALKING, 0, 1024);
-    PapilioOS.printf("  Result: %s\r\n", ok ? "PASS" : "FAIL");
+    Serial.printf("  Result: %s\r\n", ok ? "PASS" : "FAIL");
 
     // Step 4: Full verify
-    PapilioOS.println("\r\nStep 4: Run a full 32 MB verify (this takes ~1 second).");
-    PapilioOS.println("  Try: sdram verify addr");
-    PapilioOS.println("  While running, the HDMI display will continue unaffected.");
+    Serial.println("\r\nStep 4: Run a full 32 MB verify (this takes ~1 second).");
+    Serial.println("  Try: sdram verify addr");
+    Serial.println("  While running, the HDMI display will continue unaffected.");
 
-    PapilioOS.println("\r\n=== Tutorial complete ===");
-    PapilioOS.println("Commands to explore further:");
-    PapilioOS.println("  sdram dump 0 32         - Inspect first 32 words");
-    PapilioOS.println("  sdram fill 0 1000 DEAD  - Fill region");
-    PapilioOS.println("  sdram verify random     - Pseudo-random pattern test");
+    Serial.println("\r\n=== Tutorial complete ===");
+    Serial.println("Commands to explore further:");
+    Serial.println("  sdram dump 0 32         - Inspect first 32 words");
+    Serial.println("  sdram fill 0 1000 DEAD  - Fill region");
+    Serial.println("  sdram verify random     - Pseudo-random pattern test");
 }
 
 #endif // ENABLE_PAPILIO_OS

@@ -7,11 +7,11 @@ PapilioSdram::PapilioSdram(uint16_t baseAddress)
 // Private register helpers
 // ----------------------------------------------------------------
 uint32_t PapilioSdram::_readReg32(uint16_t offset) {
-    return WishboneSPI.read32(_base + offset);
+    return wishboneRead32(_base + offset);
 }
 
 void PapilioSdram::_writeReg32(uint16_t offset, uint32_t value) {
-    WishboneSPI.write32(_base + offset, value);
+    wishboneWrite32(_base + offset, value);
 }
 
 void PapilioSdram::_setPage(uint16_t page) {
@@ -73,7 +73,7 @@ void PapilioSdram::writeBlock(uint32_t wordAddr, const uint16_t* data, uint32_t 
 
         _setPage(page);
         for (uint32_t i = 0; i < chunk; i++) {
-            WishboneSPI.write32(wbOffset + (i * 4), data[i]);
+            wishboneWrite32(wbOffset + (i * 4), data[i]);
         }
         wordAddr += chunk;
         data     += chunk;
@@ -90,7 +90,7 @@ void PapilioSdram::readBlock(uint32_t wordAddr, uint16_t* data, uint32_t count) 
 
         _setPage(page);
         for (uint32_t i = 0; i < chunk; i++) {
-            data[i] = (uint16_t)(WishboneSPI.read32(wbOffset + (i * 4)) & 0xFFFF);
+            data[i] = (uint16_t)(wishboneRead32(wbOffset + (i * 4)) & 0xFFFF);
         }
         wordAddr += chunk;
         data     += chunk;
@@ -107,7 +107,7 @@ void PapilioSdram::fill(uint32_t wordAddr, uint32_t count, uint16_t value) {
 
         _setPage(page);
         for (uint32_t i = 0; i < chunk; i++) {
-            WishboneSPI.write32(wbOffset + (i * 4), value);
+            wishboneWrite32(wbOffset + (i * 4), value);
         }
         wordAddr += chunk;
         count    -= chunk;
