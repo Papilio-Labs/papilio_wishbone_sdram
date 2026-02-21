@@ -39,7 +39,7 @@ IO_LOC "sdram_dq[6]"  H14;
 IO_LOC "sdram_dq[7]"  H16;
 IO_LOC "sdram_dq[8]"  C12;
 IO_LOC "sdram_dq[9]"  B12;
-IO_LOC "sdram_dq[10]" E15;
+IO_LOC "sdram_dq[10]" E16;
 IO_LOC "sdram_dq[11]" F15;
 IO_LOC "sdram_dq[12]" D16;
 IO_LOC "sdram_dq[13]" E10;
