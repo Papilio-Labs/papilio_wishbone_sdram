@@ -31,7 +31,7 @@
 // ============================================================
 // Register offsets (relative to base address)
 // ============================================================
-#define SDRAM_REG_CSR         0x0000  ///< [8]=init_done
+#define SDRAM_REG_CSR         0x0000  ///< [0]=init_done
 #define SDRAM_REG_PAGE        0x0004  ///< [12:0] page number
 #define SDRAM_REG_DIR_ADDR    0x0008  ///< [23:0] direct SDRAM word address
 #define SDRAM_REG_DIR_DATA    0x000C  ///< [15:0] direct data (triggers SDRAM R/W)
@@ -41,7 +41,7 @@
 #define SDRAM_REG_VFY_FAIL    0x001C  ///< [23:0] first fail word address (RO)
 
 // CSR bits
-#define SDRAM_CSR_INIT_DONE   (1 << 8)
+#define SDRAM_CSR_INIT_DONE   (1 << 0)
 
 // Verify control bits
 #define SDRAM_VFY_START_BIT   (1 << 7)
