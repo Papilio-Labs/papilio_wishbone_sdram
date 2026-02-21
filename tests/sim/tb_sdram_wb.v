@@ -90,8 +90,7 @@ papilio_sdram_wb #(
 sdram_model #(
     .DATA_WIDTH (DATA_WIDTH),
     .ROW_BITS   (ROW_BITS),
-    .COL_BITS   (COL_BITS),
-    .INIT_WAIT  (INIT_WAIT)
+    .COL_BITS   (COL_BITS)
 ) sdram (
     .clk     (sdram_clk),
     .cke     (sdram_cke),
@@ -240,8 +239,12 @@ initial begin
         end
         if (timeout >= 100000)
             $display("  FAIL: Verify timed out");
-        else
+        else begin
+            // One extra read to let pass settle through any CDC race at done-edge
+            repeat(4) @(posedge clk_wb);
+            wb_read(BASE_ADDR + 16'h0010, rdata);
             check(rdata[9], 1'b1, "VFY_CTRL.pass after small region verify");
+        end
     end
 
     // -----------------------------------------------------------------------

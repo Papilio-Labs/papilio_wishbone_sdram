@@ -120,9 +120,6 @@ wire [BANK_BITS-1:0] cur_bank = cur_addr[ROW_BITS+COL_BITS+BANK_BITS-1 : ROW_BIT
 wire [ROW_BITS-1:0]  cur_row  = cur_addr[ROW_BITS+COL_BITS-1 : COL_BITS];
 wire [COL_BITS-1:0]  cur_col  = cur_addr[COL_BITS-1:0];
 
-// CAS pipeline for read latency
-reg [CAS_LATENCY:0]  cas_pipe;
-
 // State machine
 localparam S_RESET           = 5'd0;
 localparam S_INIT_WAIT       = 5'd1;
@@ -148,6 +145,7 @@ localparam S_PRECHARGE       = 5'd20;
 localparam S_PRECHARGE_WAIT  = 5'd21;
 
 reg [4:0] state;
+reg       vfy_gate;  // 1-cycle inhibit: block vfy_req re-capture after vfy_ack
 
 assign busy = (state != S_IDLE);
 
@@ -187,6 +185,7 @@ always @(posedge clk or posedge rst) begin
         init_done  <= 1'b0;
         ack        <= 1'b0;
         vfy_ack    <= 1'b0;
+        vfy_gate   <= 1'b0;
         dq_oe      <= 1'b0;
         dq_out     <= {DATA_WIDTH{1'b0}};
         sdram_cke  <= 1'b0;
@@ -200,7 +199,6 @@ always @(posedge clk or posedge rst) begin
         refresh_cnt<= {$clog2(REFRESH_INTERVAL+1){1'b0}};
         need_refresh<= 1'b0;
         timer      <= 15'd0;
-        cas_pipe   <= {(CAS_LATENCY+1){1'b0}};
         rdata      <= {DATA_WIDTH{1'b0}};
         vfy_rdata  <= {DATA_WIDTH{1'b0}};
         for (i = 0; i < (1<<BANK_BITS); i = i+1) begin
@@ -213,6 +211,7 @@ always @(posedge clk or posedge rst) begin
         dq_oe   <= 1'b0;
         ack     <= 1'b0;
         vfy_ack <= 1'b0;
+        vfy_gate <= 1'b0;
         sdram_dqm <= {(DATA_WIDTH/8){1'b0}};
 
         // Refresh counter
@@ -223,8 +222,7 @@ always @(posedge clk or posedge rst) begin
             refresh_cnt <= refresh_cnt + 1'b1;
         end
 
-        // CAS latency pipeline (shift each cycle)
-        cas_pipe <= {cas_pipe[CAS_LATENCY-1:0], 1'b0};
+        // (refresh counter and state machine below)
 
         case (state)
             // --------------------------------------------------------
@@ -308,7 +306,7 @@ always @(posedge clk or posedge rst) begin
                         row_open[i] <= 1'b0;
                     timer <= tRP - 2;
                     state <= S_REFRESH;
-                end else if (vfy_req) begin
+                end else if (vfy_req && !vfy_gate) begin
                     cur_we    <= vfy_we;
                     cur_addr  <= vfy_addr;
                     cur_wdata <= vfy_wdata;
@@ -385,8 +383,12 @@ always @(posedge clk or posedge rst) begin
                 issue_cmd(CMD_READ,
                     {{(ROW_BITS-COL_BITS-1){1'b0}}, 1'b0, cur_col},
                     cur_bank);
-                cas_pipe <= {{(CAS_LATENCY-1){1'b0}}, 1'b1, 1'b0};  // data valid in CAS_LATENCY cycles
-                timer <= CAS_LATENCY - 1;
+                // Wait CAS_LATENCY+2 cycles total from CAS issue to sample:
+                //  +1 because SDRAM cmd bus is registered (model sees READ at T+1)
+                //  +CAS_LAT pipeline shifts (data reaches cas_pipe[CAS_LAT] at T+1+CAS_LAT)
+                //  +1 because cas_valid check fires one cycle after pipeline fills (NBA)
+                // S_READ_DATA fires at T + (CAS_LATENCY+1) + 1 = T + CAS_LATENCY + 2.
+                timer <= CAS_LATENCY + 1;
                 state <= S_READ_CL;
             end
 
@@ -402,6 +404,7 @@ always @(posedge clk or posedge rst) begin
                 if (cur_vfy) begin
                     vfy_rdata <= sdram_dq;
                     vfy_ack   <= 1'b1;
+                    vfy_gate  <= 1'b1;
                 end else begin
                     ack <= 1'b1;
                 end
@@ -425,9 +428,10 @@ always @(posedge clk or posedge rst) begin
             S_WRITE_WAIT: begin
                 dq_oe <= 1'b0;
                 if (timer == 0) begin
-                    if (cur_vfy)
-                        vfy_ack <= 1'b1;
-                    else
+                    if (cur_vfy) begin
+                        vfy_ack  <= 1'b1;
+                        vfy_gate <= 1'b1;
+                    end else
                         ack <= 1'b1;
                     state <= S_IDLE;
                 end else
@@ -462,6 +466,7 @@ always @(posedge clk or posedge rst) begin
     end
 end
 
+endmodule
+
 `default_nettype wire
 
-endmodule

@@ -7,9 +7,28 @@ Requires: iverilog and vvp in PATH
 import subprocess
 import sys
 import os
+import platform
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 GATEWARE   = os.path.join(SCRIPT_DIR, "..", "..", "gateware")
+
+# On Windows (oss-cad-suite), iverilog needs environment.bat to load its DLLs.
+OSS_ENV_BAT = r"C:\oss-cad-suite\environment.bat"
+
+def _quote(path):
+    return f'"{path}"' if " " in str(path) else str(path)
+
+def iverilog_cmd(args):
+    """Return a shell=True command string that runs iverilog."""
+    if platform.system() == "Windows" and os.path.exists(OSS_ENV_BAT):
+        arg_str = " ".join(_quote(a) for a in args)
+        return f'call "{OSS_ENV_BAT}" && iverilog {arg_str}', True
+    return "iverilog " + " ".join(_quote(a) for a in args), False
+
+def vvp_cmd(vvp_file):
+    if platform.system() == "Windows" and os.path.exists(OSS_ENV_BAT):
+        return f'call "{OSS_ENV_BAT}" && vvp "{vvp_file}"', True
+    return f'vvp "{vvp_file}"', False
 
 SIMS = [
     {
@@ -21,8 +40,8 @@ SIMS = [
             os.path.join(GATEWARE,   "papilio_sdram_ctrl.v"),
         ],
         "defines":  [
-            "+define+INIT_WAIT=200",
-            "+define+SIM",
+            "-DINIT_WAIT=200",
+            "-DSIM",
         ],
     },
     {
@@ -36,8 +55,8 @@ SIMS = [
             os.path.join(GATEWARE,   "papilio_sdram_verify.v"),
         ],
         "defines":  [
-            "+define+INIT_WAIT=200",
-            "+define+SIM",
+            "-DINIT_WAIT=200",
+            "-DSIM",
         ],
     },
 ]
@@ -50,23 +69,24 @@ def run_sim(sim):
     print(f"  Compiling: {name}")
     print(f"{'='*60}")
 
-    cmd_compile = ["iverilog", "-o", out_vvp, f"-s{sim['top']}"]
-    cmd_compile += sim.get("defines", [])
-    cmd_compile += sim["sources"]
+    iverilog_args = ["-o", out_vvp, f"-s{sim['top']}"]
+    iverilog_args += sim.get("defines", [])
+    iverilog_args += sim["sources"]
 
-    result = subprocess.run(cmd_compile, capture_output=True, text=True)
+    cmd_compile, shell = iverilog_cmd(iverilog_args)
+    result = subprocess.run(cmd_compile, capture_output=True, text=True, shell=shell)
     if result.returncode != 0:
-        print(f"  COMPILE ERROR:\n{result.stderr}")
+        print(f"  COMPILE ERROR:\n{result.stderr or result.stdout}")
         return False
 
     print(f"  Running: {name}")
-    result = subprocess.run(["vvp", out_vvp], capture_output=True, text=True, timeout=60)
+    cmd_run, shell = vvp_cmd(out_vvp)
+    result = subprocess.run(cmd_run, capture_output=True, text=True, timeout=60, shell=shell)
     output = result.stdout + result.stderr
     print(output)
 
-    passed = "ALL TESTS PASSED" in output or "PASS" in output
-    failed = "FAIL" in output or result.returncode != 0
-    if failed and not passed:
+    passed = "ALL TESTS PASSED" in output or ("PASS" in output and "FAIL" not in output)
+    if not passed:
         print(f"  *** {name}: FAILED ***")
         return False
     print(f"  {name}: PASSED")

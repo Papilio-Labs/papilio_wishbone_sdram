@@ -3,7 +3,7 @@
 // Provides paged access to 32 MB SDRAM through an 8 KB extended-tier slot.
 //
 // Address map (relative to BASE_ADDR, which defaults to 0x8000):
-//   0x0000 : CSR          [8]=init_done [7:0]=status
+//   0x0000 : CSR          [0]=init_done
 //   0x0004 : PAGE_REG     [12:0]=page number (13-bit → 8192 pages × 4 KB each = 32 MB)
 //   0x0008 : DIR_ADDR     [23:0]=direct SDRAM word address
 //   0x000C : DIR_DATA     [15:0]=direct data (write triggers SDRAM write; read triggers SDRAM read)
@@ -267,86 +267,84 @@ always @(posedge clk or posedge rst) begin
         ack_tog_s2 <= ack_tog_s1;
         ack_tog_s3 <= ack_tog_s2;
 
-        wb_ack_o   <= 1'b0;
-        vfy_start  <= 1'b0;
+        wb_ack_o  <= 1'b0;
+        vfy_start <= 1'b0;
 
-        // Receive ack from SDRAM domain
+        // ----------------------------------------------------------------
+        // SDRAM ack arrives: capture read data, clear pending, give WB ack
+        // cdc_rdata_sdram has been stable for >2 WB cycles — safe to sample
+        // ----------------------------------------------------------------
         if (ack_edge_wb && cdc_pending_wb) begin
             cdc_rdata_wb   <= cdc_rdata_sdram;
             cdc_pending_wb <= 1'b0;
-            // wb_ack_o is deasserted until bus cycle drives it below
-        end
-
-        // Wishbone transaction handling
-        if (wb_cyc_i && wb_stb_i && !wb_ack_o) begin
-            if (in_regs) begin
-                // Register access — immediate response (no SDRAM needed)
+            // If the WB master is still waiting for this transaction, ack now
+            if (wb_cyc_i && wb_stb_i &&
+                (in_window || (in_regs && local_addr[5:2] == 4'h3))) begin
+                wb_dat_o <= {{(32-DATA_WIDTH){1'b0}}, cdc_rdata_sdram};
                 wb_ack_o <= 1'b1;
-                if (!wb_we_i) begin
-                    // Read
-                    case (local_addr[5:2])
-                        4'h0: wb_dat_o <= {23'b0, ctrl_init_done, 8'b0};
-                        4'h1: wb_dat_o <= {{(32-PAGE_BITS){1'b0}}, page_reg};
-                        4'h2: wb_dat_o <= {{(32-ADDR_WIDTH){1'b0}}, dir_addr_reg};
-                        4'h3: wb_dat_o <= {{(32-DATA_WIDTH){1'b0}}, cdc_rdata_wb};
-                        4'h4: wb_dat_o <= {22'b0, vfy_pass, vfy_done, 6'b0, vfy_running};
-                        4'h5: wb_dat_o <= {{(32-ADDR_WIDTH){1'b0}}, vfy_start_addr};
-                        4'h6: wb_dat_o <= {{(32-ADDR_WIDTH){1'b0}}, vfy_size};
-                        4'h7: wb_dat_o <= {{(32-ADDR_WIDTH){1'b0}}, vfy_fail_addr};
-                        default: wb_dat_o <= 32'hDEADBEEF;
-                    endcase
-                end else begin
-                    // Write
-                    case (local_addr[5:2])
-                        4'h1: page_reg <= wb_dat_i[PAGE_BITS-1:0];
-                        4'h2: dir_addr_reg <= wb_dat_i[ADDR_WIDTH-1:0];
-                        4'h4: begin
-                            vfy_pattern <= wb_dat_i[1:0];
-                            if (wb_dat_i[7]) vfy_start <= 1'b1;
-                        end
-                        4'h5: vfy_start_addr <= wb_dat_i[ADDR_WIDTH-1:0];
-                        4'h6: vfy_size <= wb_dat_i[ADDR_WIDTH-1:0];
-                        default: ;
-                    endcase
-                end
-
-                // Special: direct data register write/read triggers SDRAM access
-                if (local_addr[5:2] == 4'h3 && !cdc_pending_wb) begin
-                    cdc_addr_wb   <= dir_addr_reg;
-                    cdc_wdata_wb  <= wb_dat_i[DATA_WIDTH-1:0];
-                    cdc_we_wb     <= wb_we_i;
-                    cdc_pending_wb<= 1'b1;
-                    req_tog_wb    <= ~req_tog_wb;
-                    wb_ack_o      <= 1'b0;  // Wait for SDRAM ack
-                end
-
-            end else if (in_window && !cdc_pending_wb) begin
-                // Paged window — SDRAM access required
-                // SDRAM word addr = { page_reg[12:0], word_index[9:0] }
-                // word_index = (local_addr - 0x100) >> 2  (WB is 32-bit)
-                cdc_addr_wb   <= {page_reg[PAGE_BITS-1:0],
-                                  local_addr[11:2] - 10'd64};  // -64 = subtract 0x100>>2
-                cdc_wdata_wb  <= wb_dat_i[DATA_WIDTH-1:0];
-                cdc_we_wb     <= wb_we_i;
-                cdc_pending_wb<= 1'b1;
-                req_tog_wb    <= ~req_tog_wb;
-            end
-
-            // If paged/direct access was already pending: wait for ack_edge_wb
-            if (!cdc_pending_wb && (in_window)) begin
-                // Already issued above — nothing
             end
         end
 
-        // Deferred ack for paged/direct access
-        if (!cdc_pending_wb && !wb_ack_o && wb_cyc_i && wb_stb_i && (in_window || (in_regs && local_addr[5:2] == 4'h3))) begin
-            // We got the ack from SDRAM (cdc_pending cleared above)
-            wb_dat_o <= {{(32-DATA_WIDTH){1'b0}}, cdc_rdata_wb};
-            wb_ack_o <= 1'b1;
+        // ----------------------------------------------------------------
+        // Wishbone transaction: only accept new requests when not pending
+        // (cdc_pending_wb guards against re-issuing while SDRAM is busy)
+        // ----------------------------------------------------------------
+        if (wb_cyc_i && wb_stb_i && !wb_ack_o && !cdc_pending_wb) begin
+            if (in_regs) begin
+                if (local_addr[5:2] == 4'h3) begin
+                    // DIR_DATA: triggers SDRAM read or write — ack deferred
+                    cdc_addr_wb    <= dir_addr_reg;
+                    cdc_wdata_wb   <= wb_dat_i[DATA_WIDTH-1:0];
+                    cdc_we_wb      <= wb_we_i;
+                    cdc_pending_wb <= 1'b1;
+                    req_tog_wb     <= ~req_tog_wb;
+                end else begin
+                    // All other registers: immediate ack
+                    wb_ack_o <= 1'b1;
+                    if (!wb_we_i) begin
+                        // Read
+                        case (local_addr[5:2])
+                            4'h0: wb_dat_o <= {31'b0, ctrl_init_done};
+                            4'h1: wb_dat_o <= {{(32-PAGE_BITS){1'b0}}, page_reg};
+                            4'h2: wb_dat_o <= {{(32-ADDR_WIDTH){1'b0}}, dir_addr_reg};
+                            4'h4: wb_dat_o <= {22'b0, vfy_pass, vfy_done, 7'b0, vfy_running};
+                            4'h5: wb_dat_o <= {{(32-ADDR_WIDTH){1'b0}}, vfy_start_addr};
+                            4'h6: wb_dat_o <= {{(32-ADDR_WIDTH){1'b0}}, vfy_size};
+                            4'h7: wb_dat_o <= {{(32-ADDR_WIDTH){1'b0}}, vfy_fail_addr};
+                            default: wb_dat_o <= 32'hDEADBEEF;
+                        endcase
+                    end else begin
+                        // Write
+                        case (local_addr[5:2])
+                            4'h1: page_reg <= wb_dat_i[PAGE_BITS-1:0];
+                            4'h2: dir_addr_reg <= wb_dat_i[ADDR_WIDTH-1:0];
+                            4'h4: begin
+                                vfy_pattern <= wb_dat_i[1:0];
+                                if (wb_dat_i[7]) vfy_start <= 1'b1;
+                            end
+                            4'h5: vfy_start_addr <= wb_dat_i[ADDR_WIDTH-1:0];
+                            4'h6: vfy_size <= wb_dat_i[ADDR_WIDTH-1:0];
+                            default: ;
+                        endcase
+                    end
+                end
+
+            end else if (in_window) begin
+                // Paged window — SDRAM access required, ack deferred
+                // SDRAM word addr = { page_reg[12:0], word_index[9:0] }
+                // word_index = (local_addr - 0x100) >> 2  (WB is 32-bit aligned)
+                cdc_addr_wb    <= {page_reg[PAGE_BITS-1:0],
+                                   local_addr[11:2] - 10'd64};  // -64 = subtract 0x100>>2
+                cdc_wdata_wb   <= wb_dat_i[DATA_WIDTH-1:0];
+                cdc_we_wb      <= wb_we_i;
+                cdc_pending_wb <= 1'b1;
+                req_tog_wb     <= ~req_tog_wb;
+            end
         end
     end
 end
 
+endmodule
+
 `default_nettype wire
 
-endmodule

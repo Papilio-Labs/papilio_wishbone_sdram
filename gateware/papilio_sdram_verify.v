@@ -82,7 +82,7 @@ function [DATA_WIDTH-1:0] gen_data;
     input [15:0] lfsr;
     begin
         case (pat)
-            PAT_WALKING: gen_data = (DATA_WIDTH)'(1'b1) << (addr % DATA_WIDTH);
+            PAT_WALKING: gen_data = 1 << (addr % DATA_WIDTH);
             PAT_ADDR:    gen_data = addr[DATA_WIDTH-1:0];
             PAT_RANDOM:  gen_data = lfsr[DATA_WIDTH-1:0];
             PAT_FILL:    gen_data = FILL_VALUE[DATA_WIDTH-1:0];
@@ -147,6 +147,9 @@ always @(posedge clk or posedge rst) begin
                     cur_addr   <= cur_addr + 1'b1;
                     words_left <= words_left - 1'b1;
                     state      <= S_WRITE;
+                end else begin
+                    // Re-assert req in case controller was busy (refresh etc.)
+                    ctrl_req <= 1'b1;
                 end
             end
 
@@ -164,12 +167,15 @@ always @(posedge clk or posedge rst) begin
 
             S_READ_ACK: begin
                 if (ctrl_ack) begin
+                    // ctrl_ack received — fall through to verify
                     begin : verify_check
                         reg [DATA_WIDTH-1:0] expected;
                         expected = gen_data(cur_addr, cur_pattern, lfsr_rd);
-                        if (ctrl_rdata !== expected && pass) begin
-                            pass      <= 1'b0;
-                            fail_addr <= cur_addr;
+                        if (ctrl_rdata !== expected) begin
+                            if (pass) begin
+                                pass      <= 1'b0;
+                                fail_addr <= cur_addr;
+                            end
                         end
                     end
                     if (cur_pattern == PAT_RANDOM)
@@ -177,6 +183,9 @@ always @(posedge clk or posedge rst) begin
                     cur_addr   <= cur_addr + 1'b1;
                     words_left <= words_left - 1'b1;
                     state      <= S_READ;
+                end else begin
+                    // Re-assert req in case controller was busy (refresh etc.)
+                    ctrl_req <= 1'b1;
                 end
             end
 
@@ -185,6 +194,7 @@ always @(posedge clk or posedge rst) begin
                 done    <= 1'b1;
                 running <= 1'b0;
                 state   <= S_IDLE;
+
             end
 
             default: state <= S_IDLE;
@@ -192,6 +202,7 @@ always @(posedge clk or posedge rst) begin
     end
 end
 
+endmodule
+
 `default_nettype wire
 
-endmodule
