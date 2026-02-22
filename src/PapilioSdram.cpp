@@ -115,8 +115,10 @@ void PapilioSdram::fill(uint32_t wordAddr, uint32_t count, uint16_t value) {
 }
 
 void PapilioSdram::startVerify(SdramPattern pattern, uint32_t startWordAddr, uint32_t wordCount) {
+    // Clamp to 24-bit max: SDRAM_TOTAL_WORDS (0x01000000) would mask to 0 otherwise
+    if (wordCount > 0x00FFFFFFUL) wordCount = 0x00FFFFFFUL;
     _writeReg32(SDRAM_REG_VFY_START, startWordAddr & 0x00FFFFFF);
-    _writeReg32(SDRAM_REG_VFY_SIZE,  wordCount     & 0x00FFFFFF);
+    _writeReg32(SDRAM_REG_VFY_SIZE,  wordCount);
     _writeReg32(SDRAM_REG_VFY_CTRL,
                 ((uint32_t)pattern & 0x3) | SDRAM_VFY_START_BIT);
 }

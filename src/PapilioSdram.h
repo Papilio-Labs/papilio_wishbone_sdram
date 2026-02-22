@@ -8,8 +8,8 @@
  * via the Wishbone extended tier at a configurable base address.
  *
  * The SDRAM is accessed through a paged window:
- *   - Each page is 4 KB (2048 × 16-bit words)
- *   - 8192 pages cover the full 32 MB
+ *   - Each page is 2 KB (1024 × 16-bit words); WIN_BITS=10 in gateware
+ *   - 16384 pages cover the full 32 MB
  *   - setPage() selects the active page; the window maps to readWord()/writeWord()
  *
  * Hardware memory verification runs autonomously at SDRAM clock speed (~100 MHz),
@@ -53,9 +53,9 @@
 // ============================================================
 #define SDRAM_TOTAL_BYTES     (32UL * 1024 * 1024)  ///< 32 MB
 #define SDRAM_TOTAL_WORDS     (SDRAM_TOTAL_BYTES / 2) ///< 16 M × 16-bit words
-#define SDRAM_PAGE_WORDS      2048U   ///< words per page
-#define SDRAM_PAGE_BYTES      4096U   ///< bytes per page
-#define SDRAM_NUM_PAGES       8192U   ///< total pages
+#define SDRAM_PAGE_WORDS      1024U   ///< SDRAM words per page (WIN_BITS=10 → 2^10)
+#define SDRAM_PAGE_BYTES      2048U   ///< SDRAM bytes per page (1024 words × 2 bytes)
+#define SDRAM_NUM_PAGES       16384U  ///< total pages (16 M words / 1024)
 
 // Paged window offset within the extended tier slot
 #define SDRAM_WINDOW_OFFSET   0x0100  ///< local offset of paged window start

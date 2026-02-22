@@ -117,7 +117,8 @@ always @(posedge clk or posedge rst) begin
                     words_left  <= size;
                     lfsr_wr     <= 16'hACE1;  // fixed init seed
                     done        <= 1'b0;
-                    pass        <= 1'b0;
+                    pass        <= 1'b1;      // assume pass; cleared to 0 on first mismatch
+                    fail_addr   <= {ADDR_WIDTH{1'b0}};
                     running     <= 1'b1;
                     state       <= S_WRITE;
                 end
@@ -190,7 +191,8 @@ always @(posedge clk or posedge rst) begin
             end
 
             S_DONE: begin
-                pass    <= (fail_addr == {ADDR_WIDTH{1'b0}}) ? 1'b1 : pass;
+                // pass already reflects result from S_READ_ACK (1=ok, 0=fail)
+                // fail_addr holds first failing address (or 0 if none)
                 done    <= 1'b1;
                 running <= 1'b0;
                 state   <= S_IDLE;
